@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    #chessboard {
+      display: grid;
+      grid-template-columns: repeat(4, 100px);
+      grid-template-rows: repeat(4, 100px);
+    }
+
+    .white {
+      background-color: #eee;
+    }
+
+    .black {
+      background-color: #444;
+    }
+
+    .cell {
+      width: 100px;
+      height: 100px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 20px;
+      position: relative;
+    }
+
+    .cursor {
+      background-color: yellow;
+      opacity: 0.7;
+    }
+
+    .stone {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background-color: brown;
+      border-radius: 50%;
+    }
+
+    #comandos {
+      margin-top: 20px;
+      font-size: 18px;
+    }
+
+    #score {
+      margin-top: 20px;
+      font-size: 20px;
+    }
+
+    #stoneCount {
+      margin-top: 10px;
+      font-size: 20px;
+    }
+
+    #moveLimit {
+      margin-top: 10px;
+      font-size: 20px;
+    }
+
+    #message {
+      margin-top: 10px;
+      font-size: 20px;
+      color: red;
+    }
+    #staticMessage {
+      margin: ;
+      font-size: 14px;
+      color: green;
+    }
+  </style>
+  <title>Agente racional</title>
+</head>
+<body>
+  <div id="staticMessage">[SETAS] UP - DOWN - RIGHT - LEFT </div>
+  <div id="staticMessage">[D] - SUGA AS SUJEIRAS </div>
+  <div id="staticMessage">[R] - NO 'A', ESVAZIA BOLSA</div>
+  <div id="staticMessage">[E] - NO 'A', REINICIA AREA (INCOMPLETO)</div>
+  <div id="staticMessage">[Q] - NO 'A', VERIFICA SE OBJETIVO FOI CONCLUÍDO</div>
+  <div id="chessboard"></div>
+  <div id="score">Energia: 0</div>
+  <div id="stoneCount">Area Suja: 0</div>
+  <div id="moveLimit">Energia Restante: 100</div>
+  <div id="message"></div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const chessboard = document.getElementById('chessboard');
+      const alphabet = 'ABCDEFGHIJKLMNOP';
+      let cursorPosition = { row: 0, col: 0 };
+      let moveCount = 0;
+      let stoneCount = 0;
+      const moveLimit = 100;
+      const captureLimit = 10;
+      let captureCount = 0;
+
+      function updateCursor() {
+        const cursor = document.querySelector('.cursor');
+        if (cursor) {
+          cursor.classList.remove('cursor');
+        }
+
+        const cellIndex = cursorPosition.row * 4 + cursorPosition.col;
+        const cell = chessboard.children[cellIndex];
+        cell.classList.add('cursor');
+      }
+
+      function addStones(row, col, count) {
+        const cellIndex = row * 4 + col;
+        const cell = chessboard.children[cellIndex];
+
+        for (let i = 0; i < count; i++) {
+          const stone = document.createElement('div');
+          stone.classList.add('stone');
+          cell.appendChild(stone);
+          stoneCount++;
+        }
+
+        updateStoneCount();
+      }
+
+      function removeStones(row, col, count) {
+        const cellIndex = row * 4 + col;
+        const cell = chessboard.children[cellIndex];
+        const stones = cell.querySelectorAll('.stone');
+
+        for (let i = 0; i < count; i++) {
+          const stone = stones[i];
+          if (stone) {
+            cell.removeChild(stone);
+            stoneCount--;
+            captureCount++;
+          }
+        }
+
+        updateStoneCount();
+        updateCaptureCount();
+      }
+
+      function updateStoneCount() {
+        const stoneCountElement = document.getElementById('stoneCount');
+        stoneCountElement.textContent = `Area suja: ${stoneCount}`;
+      }
+
+      function updateScore() {
+        const scoreElement = document.getElementById('score');
+        scoreElement.textContent = `Energia: ${moveCount}`;
+      }
+
+      function updateMoveLimit() {
+        const moveLimitElement = document.getElementById('moveLimit');
+        moveLimitElement.textContent = `Energia Restantes: ${moveLimit - moveCount}`;
+      }
+
+      function updateCaptureCount() {
+        const stoneCountElement = document.getElementById('stoneCount');
+        stoneCountElement.textContent = `Area suja: ${captureCount}`;
+      }
+
+      function checkMoveLimit() {
+        if (moveCount >= moveLimit) {
+          const messageElement = document.getElementById('message');
+          messageElement.textContent = 'Sua energia acabou! Reinicie o Agente.';
+        }
+      }
+
+      function checkCaptureLimit() {
+        if (captureCount >= captureLimit) {
+          const messageElement = document.getElementById('message');
+          messageElement.textContent = 'Sua bolsa esta cheia! Retorne à posição A e pressione R para reiniciar as capturas.';
+        }
+      }
+
+      function restartCaptures() {
+        captureCount = 0;
+        const messageElement = document.getElementById('message');
+        messageElement.textContent = '';
+        updateCaptureCount();
+      }
+
+      function restartGame() {
+        cursorPosition = { row: 0, col: 0 };
+        moveCount = 0;
+        stoneCount = 0;
+        const messageElement = document.getElementById('message');
+        messageElement.textContent = '';
+        updateCursor();
+        updateScore();
+        updateMoveLimit();
+        updateStoneCount();
+        resetStones();
+      }
+      // sujeira pelas area
+      function resetStones() {
+        const stonePositions = ['C', 'F', 'H', 'I', 'K', 'M', 'O'];
+        for (let row = 0; row < 4; row++) {
+          for (let col = 0; col < 4; col++) {
+            const cellIndex = row * 4 + col;
+            const cell = chessboard.children[cellIndex];
+
+            if (stonePositions.includes(cell.textContent)) {
+              addStones(row, col, 10);
+            }
+          }
+        }
+      }
+
+      function handleKeyPress(event) {
+        if (moveCount >= moveLimit) {
+          return;
+        }
+
+        switch (event.key) {
+          case 'ArrowUp':
+            cursorPosition.row = Math.max(0, cursorPosition.row - 1);
+            break;
+          case 'ArrowDown':
+            cursorPosition.row = Math.min(3, cursorPosition.row + 1);
+            break;
+          case 'ArrowLeft':
+            cursorPosition.col = Math.max(0, cursorPosition.col - 1);
+            break;
+          case 'ArrowRight':
+            cursorPosition.col = Math.min(3, cursorPosition.col + 1);
+            break;
+          case 'd':
+          case 'D':
+            removeStones(cursorPosition.row, cursorPosition.col, 1);
+            break;
+          case 'e':
+          case 'E':
+            restartGame();
+            return; // Avoid incrementing moveCount when restarting the game
+          case 'r':
+          case 'R':
+            if (cursorPosition.row === 0 && cursorPosition.col === 0) {
+              restartCaptures();
+            }
+            break;
+        }
+
+        moveCount++;
+        updateCursor();
+        updateScore();
+        updateMoveLimit();
+        countStones();
+        checkMoveLimit();
+        checkCaptureLimit();
+
+        // Verifica se o contador de pedras chegou a zero e o cursor está na posição inicial
+        if (stoneCount === 0 && cursorPosition.row === 0 && cursorPosition.col === 0) {
+          const messageElement = document.getElementById('message');
+          messageElement.textContent = 'Atividade concluída!';
+        }
+      }
+
+      function countStones() {
+        const stones = document.querySelectorAll('.stone');
+        stoneCount = stones.length;
+        updateStoneCount();
+      }
+
+      document.addEventListener('keydown', handleKeyPress);
+
+      for (let row = 0; row < 4; row++) {
+        for (let col = 0; col < 4; col++) {
+          const cell = document.createElement('div');
+          cell.classList.add('cell', (row + col) % 2 === 0 ? 'white' : 'black');
+          cell.textContent = alphabet[row * 4 + col];
+          chessboard.appendChild(cell);
+
+          // Adiciona 7 pedras nas posições C, F, H, I, K, M e O
+          if (['C', 'F', 'H', 'I', 'K', 'M', 'O'].includes(cell.textContent)) {
+            addStones(row, col,7 );
+          }
+        }
+      }
+
+      // Initial cursor setup
+      updateCursor();
+      updateScore();
+      countStones();
+      updateMoveLimit();
+    });
+  </script>
+</body>
+</html>
